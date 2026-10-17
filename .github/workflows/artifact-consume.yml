@@ -1,0 +1,35 @@
+name: Artifact Consumer
+
+on:
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  consume:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@v4
+        with:
+          name: audit-report
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: incoming
+      - name: Summarize upstream report
+        run: node scripts/consume-artifact.mjs incoming/audit-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: consumer-summary
+          path: consumer-summary.json

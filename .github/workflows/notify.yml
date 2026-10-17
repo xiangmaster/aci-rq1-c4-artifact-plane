@@ -1,0 +1,32 @@
+name: Notify
+
+on:
+  workflow_run:
+    workflows: [Artifact Consumer]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  notify:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@v4
+        with:
+          name: consumer-summary
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: summary
+      - name: Post summary to webhook
+        env:
+          NOTIFY_URL: ${{ vars.NOTIFY_URL }}
+        run: node scripts/notify.mjs summary/consumer-summary.json

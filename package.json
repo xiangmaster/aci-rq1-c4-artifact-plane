@@ -1,0 +1,24 @@
+{
+  "name": "config-audit",
+  "version": "0.9.4",
+  "description": "Audit JSON configuration files against a declarative schema.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "config-audit": "src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "lint": "node --check src/index.js && node --check src/rules.js && node --check src/cli.js",
+    "check": "npm run lint && npm test"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}
