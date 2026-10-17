@@ -72,25 +72,43 @@ function parseArguments(raw) {
   }
 }
 
-async function callOpenAI() {
-  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 2500,
-      messages: [{ role: "system", content: system }, ...messages],
-      tools: openaiTools(),
-      tool_choice: "auto",
-    }),
-  });
+async function postOpenAI(body) {
+  const request = async (payload) =>
+    fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+  let response = await request(body);
+  if (response.status === 400) {
+    const text = await response.text();
+    if (text.includes("max_tokens") && text.includes("max_completion_tokens")) {
+      const retry = { ...body };
+      retry.max_completion_tokens = retry.max_tokens;
+      delete retry.max_tokens;
+      response = await request(retry);
+    } else {
+      throw new Error(`model request failed: HTTP 400 ${text}`);
+    }
+  }
   if (!response.ok) {
     throw new Error(`model request failed: HTTP ${response.status} ${await response.text()}`);
   }
-  const payload = await response.json();
+  return response.json();
+}
+
+async function callOpenAI() {
+  const payload = await postOpenAI({
+    model,
+    max_tokens: 2500,
+    messages: [{ role: "system", content: system }, ...messages],
+    tools: openaiTools(),
+    tool_choice: "auto",
+  });
   const message = payload.choices?.[0]?.message || {};
   const calls = message.tool_calls || [];
   return {
