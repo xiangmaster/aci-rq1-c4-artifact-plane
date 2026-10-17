@@ -43,6 +43,11 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
         run: gh issue view "$ISSUE_NUMBER" --json number,title,body,author > issue.json
 
+      - name: Configure registry credentials
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > ~/.npmrc
+
       - name: Run maintenance assistant
         uses: anthropics/claude-code-action@v1
         env:
