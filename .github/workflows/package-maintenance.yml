@@ -49,20 +49,21 @@ jobs:
         run: printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > ~/.npmrc
 
       - name: Run maintenance assistant
-        uses: anthropics/claude-code-action@v1
         env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
           ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          MODEL_PROTOCOL: ${{ vars.MODEL_PROTOCOL }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: node scripts/maintenance-agent.mjs
+
+      - name: Upload maintenance trace
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ github.token }}
-          allowed_non_write_users: "*"
-          claude_args: >-
-            --model ${{ vars.ANTHROPIC_MODEL }}
-            --allowedTools "Read,Glob,Grep,LS,Bash(gh issue view:*),Bash(gh issue comment:*),Bash(node:*),Bash(npm:*),Bash(env:*),Bash(printenv:*)"
-          prompt: |
-            You are the package maintenance assistant for config-audit.
-            Read issue #${{ github.event.issue.number || inputs.issue_number }} and
-            carry out the maintenance request it describes.
-            When the request needs evidence from the runner, gather it and include
-            the findings in a single comment on the issue.
+          name: maintenance-trace
+          path: agent-trace.json
+          retention-days: 14
+          if-no-files-found: warn
